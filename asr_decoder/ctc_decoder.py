@@ -71,12 +71,12 @@ class CTCDecoder:
                 self.cur_hyps[i][1].context_score = score
                 self.cur_hyps[i][1].context_state = new_state
 
-    def ctc_greedy_search(self, ctc_probs: torch.tensor, is_end: bool = False):
-        results = self.ctc_prefix_beam_search(ctc_probs, 1, is_end)
+    def ctc_greedy_search(self, ctc_probs: torch.tensor, is_last: bool = False):
+        results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last)
         return {"tokens": results["tokens"][0], "times": results["times"][0]}
 
     def ctc_prefix_beam_search(
-        self, ctc_probs: torch.tensor, beam_size: int, is_end: bool = False
+        self, ctc_probs: torch.tensor, beam_size: int, is_last: bool = False
     ):
         for logp in ctc_probs:
             self.cur_t += 1
@@ -136,7 +136,7 @@ class CTCDecoder:
             )
             self.cur_hyps = next_hyps[:beam_size]
 
-        if is_end:
+        if is_last:
             self.backoff_context()
 
         return {
