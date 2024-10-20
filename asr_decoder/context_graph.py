@@ -77,7 +77,7 @@ class ContextGraph:
 
     def __init__(
         self,
-        context_path: str,
+        contexts: List[str],
         symbol_table: Dict[str, int],
         bpe_model: str = None,
         context_score: float = 6.0,
@@ -87,6 +87,13 @@ class ContextGraph:
         A root node will be created (**NOTE:** the token of root is hardcoded to -1).
 
         Args:
+          contexts:
+            A list of context strings.
+          symbol_table:
+            Symbol table for decoding. Used to map the tokens in the context
+            strings to their corresponding integer IDs.
+          bpe_model:
+            BPE model path. Used to tokenize the context.
           context_score:
             The bonus score for each token(note: NOT for each word/phrase, it means longer  # noqa
             word/phrase will have larger bonus score, they have to be matched though).
@@ -95,8 +102,6 @@ class ContextGraph:
         self.num_nodes = 0
         self.root = ContextState(self.num_nodes)
         self.root.fail = self.root
-
-        contexts = open(context_path).readlines()
         self.build_graph(tokenize(contexts, symbol_table, bpe_model))
 
     def build_graph(self, token_ids: List[List[int]]):

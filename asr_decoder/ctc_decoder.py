@@ -25,15 +25,15 @@ from .utils import log_add
 class CTCDecoder:
     def __init__(
         self,
-        context_path: str = None,
+        contexts: List[str] = None,
         symbol_table: Dict[str, int] = None,
         bpe_model: str = None,
         context_score: float = 6.0,
         blank_id: int = 0,
     ):
         self.context_graph = None
-        if context_path is not None:
-            self.context_graph = ContextGraph(context_path, symbol_table, bpe_model)
+        if contexts is not None:
+            self.context_graph = ContextGraph(contexts, symbol_table, bpe_model)
         self.blank_id = blank_id
         self.cur_t = 0
         self.cur_hyps = []
