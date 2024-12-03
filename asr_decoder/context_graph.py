@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Tuple
 from collections import deque
+from typing import Dict, List, Tuple
 
 from .utils import tokenize
 
@@ -172,9 +172,7 @@ class ContextGraph:
                 node.output_score += 0 if output is None else output.output_score
                 queue.append(node)
 
-    def forward_one_step(
-        self, state: ContextState, token: int
-    ) -> Tuple[float, ContextState]:
+    def forward_one_step(self, state: ContextState, token: int) -> Tuple[float, ContextState]:
         """Search the graph with given state and token.
 
         Args:

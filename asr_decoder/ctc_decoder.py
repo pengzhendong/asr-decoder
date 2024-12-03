@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 from collections import defaultdict
+from typing import Dict, List
 
 import torch
 
@@ -42,9 +42,7 @@ class CTCDecoder:
     def reset(self):
         self.cur_t = 0
         context_root = None if self.context_graph is None else self.context_graph.root
-        self.cur_hyps = [
-            (tuple(), PrefixScore(s=0.0, v_s=0.0, context_state=context_root))
-        ]
+        self.cur_hyps = [(tuple(), PrefixScore(s=0.0, v_s=0.0, context_state=context_root))]
 
     def copy_context(self, prefix_score, next_score):
         # perfix not changed, copy the context from prefix
@@ -55,9 +53,7 @@ class CTCDecoder:
 
     def update_context(self, prefix_score, next_score, word_id):
         if self.context_graph is not None and not next_score.has_context:
-            context_score, context_state = self.context_graph.forward_one_step(
-                prefix_score.context_state, word_id
-            )
+            context_score, context_state = self.context_graph.forward_one_step(prefix_score.context_state, word_id)
             next_score.context_score = prefix_score.context_score + context_score
             next_score.context_state = context_state
             next_score.has_context = True
@@ -75,9 +71,7 @@ class CTCDecoder:
         results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last)
         return {"tokens": results["tokens"][0], "times": results["times"][0]}
 
-    def ctc_prefix_beam_search(
-        self, ctc_probs: torch.tensor, beam_size: int, is_last: bool = False
-    ):
+    def ctc_prefix_beam_search(self, ctc_probs: torch.tensor, beam_size: int, is_last: bool = False):
         for logp in ctc_probs:
             self.cur_t += 1
             # key: prefix, value: PrefixScore
@@ -89,9 +83,7 @@ class CTCDecoder:
                     last = prefix[-1] if len(prefix) > 0 else None
                     if u == self.blank_id:  # blank
                         next_score = next_hyps[prefix]
-                        next_score.s = log_add(
-                            next_score.s, prefix_score.score() + prob
-                        )
+                        next_score.s = log_add(next_score.s, prefix_score.score() + prob)
                         next_score.v_s = prefix_score.viterbi_score() + prob
                         next_score.times_s = prefix_score.times().copy()
                         # perfix not changed, copy the context from prefix
@@ -120,9 +112,7 @@ class CTCDecoder:
                     else:
                         n_prefix = prefix + (u,)
                         next_score = next_hyps[n_prefix]
-                        next_score.ns = log_add(
-                            next_score.ns, prefix_score.score() + prob
-                        )
+                        next_score.ns = log_add(next_score.ns, prefix_score.score() + prob)
                         if next_score.v_ns < prefix_score.viterbi_score() + prob:
                             next_score.v_ns = prefix_score.viterbi_score() + prob
                             next_score.cur_token_prob = prob
@@ -131,9 +121,7 @@ class CTCDecoder:
                         self.update_context(prefix_score, next_score, u)
 
             # 2. Second beam prune
-            next_hyps = sorted(
-                next_hyps.items(), key=lambda x: x[1].total_score(), reverse=True
-            )
+            next_hyps = sorted(next_hyps.items(), key=lambda x: x[1].total_score(), reverse=True)
             self.cur_hyps = next_hyps[:beam_size]
 
         if is_last:
