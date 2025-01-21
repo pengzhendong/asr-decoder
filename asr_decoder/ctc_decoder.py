@@ -33,7 +33,7 @@ class CTCDecoder:
     ):
         self.context_graph = None
         if contexts is not None:
-            self.context_graph = ContextGraph(contexts, symbol_table, bpe_model)
+            self.context_graph = ContextGraph(contexts, symbol_table, bpe_model, context_score)
         self.blank_id = blank_id
         self.cur_t = 0
         self.cur_hyps = []
@@ -67,11 +67,13 @@ class CTCDecoder:
                 self.cur_hyps[i][1].context_score = score
                 self.cur_hyps[i][1].context_state = new_state
 
-    def ctc_greedy_search(self, ctc_probs: torch.tensor, is_last: bool = False):
+    def ctc_greedy_search(self, ctc_probs: torch.Tensor, is_last: bool = False):
         results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last)
+        if is_last:
+            self.reset()
         return {"tokens": results["tokens"][0], "times": results["times"][0]}
 
-    def ctc_prefix_beam_search(self, ctc_probs: torch.tensor, beam_size: int, is_last: bool = False):
+    def ctc_prefix_beam_search(self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False):
         for logp in ctc_probs:
             self.cur_t += 1
             # key: prefix, value: PrefixScore
@@ -124,10 +126,8 @@ class CTCDecoder:
             next_hyps = sorted(next_hyps.items(), key=lambda x: x[1].total_score(), reverse=True)
             self.cur_hyps = next_hyps[:beam_size]
 
+        cur_hyps = self.cur_hyps
         if is_last:
             self.backoff_context()
-
-        return {
-            "tokens": [list(y[0]) for y in self.cur_hyps],
-            "times": [y[1].times() for y in self.cur_hyps],
-        }
+            self.reset()
+        return {"tokens": [list(y[0]) for y in cur_hyps], "times": [y[1].times() for y in cur_hyps]}
