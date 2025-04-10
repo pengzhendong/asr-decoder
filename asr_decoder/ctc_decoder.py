@@ -14,6 +14,7 @@
 
 from collections import defaultdict
 from typing import Dict, List
+import math
 
 import torch
 
@@ -67,13 +68,13 @@ class CTCDecoder:
                 self.cur_hyps[i][1].context_score = score
                 self.cur_hyps[i][1].context_state = new_state
 
-    def ctc_greedy_search(self, ctc_probs: torch.Tensor, is_last: bool = False):
-        results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last)
+    def ctc_greedy_search(self, ctc_probs: torch.Tensor, is_last: bool = False, return_probs: bool = False):
+        results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last, return_probs)
         if is_last:
             self.reset()
-        return {"tokens": results["tokens"][0], "times": results["times"][0]}
+        return {"tokens": results["tokens"][0], "times": results["times"][0], "probs": results["probs"][0]}
 
-    def ctc_prefix_beam_search(self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False):
+    def ctc_prefix_beam_search(self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False, return_probs: bool = False):
         for logp in ctc_probs:
             self.cur_t += 1
             # key: prefix, value: PrefixScore
@@ -88,6 +89,8 @@ class CTCDecoder:
                         next_score.s = log_add(next_score.s, prefix_score.score() + prob)
                         next_score.v_s = prefix_score.viterbi_score() + prob
                         next_score.times_s = prefix_score.times().copy()
+                        if return_probs:
+                            next_score.token_probs = prefix_score.token_probs.copy()
                         # perfix not changed, copy the context from prefix
                         self.copy_context(prefix_score, next_score)
                     elif u == last:
@@ -100,6 +103,9 @@ class CTCDecoder:
                                 next_score1.cur_token_prob = prob
                                 next_score1.times_ns = prefix_score.times_ns.copy()
                                 next_score1.times_ns[-1] = self.cur_t
+                        if return_probs:
+                            next_score1.token_probs = prefix_score.token_probs.copy()
+                            next_score1.token_probs[-1] = max(next_score1.token_probs[-1], prob)
                         self.copy_context(prefix_score, next_score1)
                         # Update *u-u -> *uu, - is for blank
                         n_prefix = prefix + (u,)
@@ -110,6 +116,9 @@ class CTCDecoder:
                             next_score2.cur_token_prob = prob
                             next_score2.times_ns = prefix_score.times_s.copy()
                             next_score2.times_ns.append(self.cur_t)
+                        if return_probs:
+                            next_score2.token_probs = prefix_score.token_probs.copy()
+                            next_score2.token_probs.append(prob)
                         self.update_context(prefix_score, next_score2, u)
                     else:
                         n_prefix = prefix + (u,)
@@ -120,6 +129,9 @@ class CTCDecoder:
                             next_score.cur_token_prob = prob
                             next_score.times_ns = prefix_score.times().copy()
                             next_score.times_ns.append(self.cur_t)
+                        if return_probs:
+                            next_score.token_probs = prefix_score.token_probs.copy()
+                            next_score.token_probs.append(prob)
                         self.update_context(prefix_score, next_score, u)
 
             # 2. Second beam prune
@@ -130,4 +142,8 @@ class CTCDecoder:
         if is_last:
             self.backoff_context()
             self.reset()
-        return {"tokens": [list(y[0]) for y in cur_hyps], "times": [y[1].times() for y in cur_hyps]}
+
+        response = {"tokens": [list(y[0]) for y in cur_hyps], "times": [y[1].times() for y in cur_hyps]}
+        if return_probs:
+            response["probs"] = [[math.exp(p) for p in y[1].token_probs] for y in cur_hyps]
+        return response

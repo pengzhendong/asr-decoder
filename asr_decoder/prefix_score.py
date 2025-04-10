@@ -38,6 +38,7 @@ class PrefixScore:
         self.context_state = context_state
         self.context_score = context_score
         self.has_context = False
+        self.token_probs = []  # The maximum probability of each token
 
     def score(self):
         return log_add(self.s, self.ns)
