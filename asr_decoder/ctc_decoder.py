@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from collections import defaultdict
 from typing import Dict, List
-import math
 
 import torch
 
@@ -74,7 +74,9 @@ class CTCDecoder:
             self.reset()
         return {"tokens": results["tokens"][0], "times": results["times"][0], "probs": results["probs"][0]}
 
-    def ctc_prefix_beam_search(self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False, return_probs: bool = False):
+    def ctc_prefix_beam_search(
+        self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False, return_probs: bool = False
+    ):
         for logp in ctc_probs:
             self.cur_t += 1
             # key: prefix, value: PrefixScore
