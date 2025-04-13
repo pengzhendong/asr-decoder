@@ -72,7 +72,9 @@ class CTCDecoder:
         results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last, return_probs)
         if is_last:
             self.reset()
-        return {"tokens": results["tokens"][0], "times": results["times"][0], "probs": results["probs"][0]}
+        if return_probs:
+            return {"tokens": results["tokens"][0], "times": results["times"][0], "probs": results["probs"][0]}
+        return {"tokens": results["tokens"][0], "times": results["times"][0]}
 
     def ctc_prefix_beam_search(
         self, ctc_probs: torch.Tensor, beam_size: int, is_last: bool = False, return_probs: bool = False
