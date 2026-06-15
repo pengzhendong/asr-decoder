@@ -64,9 +64,11 @@ class CTCDecoder:
             # We should backoff the context score/state when the context is
             # not fully matched at the last time.
             for i, hyp in enumerate(self.cur_hyps):
-                score, new_state = self.context_graph.finalize(hyp[1].context_state)
-                self.cur_hyps[i][1].context_score = score
-                self.cur_hyps[i][1].context_state = new_state
+                state = hyp[1].context_state
+                if state.is_end:
+                    score, new_state = self.context_graph.finalize(state)
+                    self.cur_hyps[i][1].context_score = score
+                    self.cur_hyps[i][1].context_state = new_state
 
     def ctc_greedy_search(self, ctc_probs: torch.Tensor, is_last: bool = False, return_probs: bool = False):
         results = self.ctc_prefix_beam_search(ctc_probs, 1, is_last, return_probs)
@@ -143,8 +145,8 @@ class CTCDecoder:
             self.cur_hyps = next_hyps[:beam_size]
 
         cur_hyps = self.cur_hyps
+        self.backoff_context()
         if is_last:
-            self.backoff_context()
             self.reset()
 
         response = {"tokens": [list(y[0]) for y in cur_hyps], "times": [y[1].times() for y in cur_hyps]}
