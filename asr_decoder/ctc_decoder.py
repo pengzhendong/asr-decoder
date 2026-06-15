@@ -67,7 +67,7 @@ class CTCDecoder:
                 state = hyp[1].context_state
                 if state.is_end:
                     score, new_state = self.context_graph.finalize(state)
-                    self.cur_hyps[i][1].context_score = score
+                    self.cur_hyps[i][1].context_score += score
                     self.cur_hyps[i][1].context_state = new_state
 
     def ctc_greedy_search(self, ctc_probs: torch.Tensor, is_last: bool = False, return_probs: bool = False):
